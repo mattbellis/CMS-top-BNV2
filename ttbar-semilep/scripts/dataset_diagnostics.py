@@ -84,10 +84,26 @@ def get_event_count(dataset_path: str) -> int:
     for line in result:
         try:
             data = json.loads(line)
+            # DAS returns either a list of dicts or a single dict
+            if isinstance(data, list):
+                data = data[0] if data else {}
+            return int(data.get("nevents", -1))
+        except (json.JSONDecodeError, IndexError, KeyError):
+            continue
+    return -1
+
+'''
+def get_event_count(dataset_path: str) -> int:
+    """Return the total number of events in a DAS dataset."""
+    result = das_query(dataset_path, query_type="summary")
+    for line in result:
+        try:
+            data = json.loads(line)
             return int(data.get("nevents", -1))
         except json.JSONDecodeError:
             continue
     return -1
+'''
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -108,6 +124,13 @@ def build_filelist_json(samples: dict, output_path: Path, is_data: bool = False,
         ...
     }
     """
+    ERA_TO_YEAR = {
+    "UL16APV": "2016_PreVFP",
+    "UL16":    "2016_PostVFP",
+    "UL17":    "2017",
+    "UL18":    "2018",
+    }
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     out = {}
 
@@ -118,10 +141,14 @@ def build_filelist_json(samples: dict, output_path: Path, is_data: bool = False,
         info["n_effective_events"] = n_events
 
         metadata = {
+            "sample":     name,       # ← add this line
+            "year":     "year": year_map.get(era, "2018"),  # ← add this
+            "isMC":     "False" if is_data else "True",   # ← add this
             "das_path":   info["das_path"],
             "era":        info.get("era", "unknown"),
             "is_data":    is_data,
             "n_events":   n_events,
+            "nevents":    n_events,
         }
         if not is_data:
             metadata["cross_section"] = info["cross_section"]

@@ -1,204 +1,102 @@
-"""
-analysis_config.py — pocket-coffea Configurator for the ttbar semileptonic analysis.
+import os
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-Run this file directly to validate the configuration:
-    python config/analysis_config.py
-
-Pass it to run_analysis.py via --config.
-"""
+import cloudpickle
 
 from pocket_coffea.utils.configurator import Configurator
-from pocket_coffea.lib.cut_definition import Cut
+from pocket_coffea.lib.cut_functions import (
+    get_nPVgood, goldenJson, eventFlags,
+    get_nObj_min, get_nBtagMin, get_HLTsel,
+)
+from pocket_coffea.parameters.cuts import passthrough
+from pocket_coffea.parameters.histograms import *
+from pocket_coffea.parameters import defaults
+from pocket_coffea.lib.hist_manager import Axis, HistConf
 from pocket_coffea.lib.columns_manager import ColOut
-from pocket_coffea.parameters.cuts.preselection_cuts import (
-    passthrough,
-    goldenJson,
-)
-from pocket_coffea.parameters.histograms import HistConf, Axis
 
+import workflows.ttbar_semilep_processor as workflow
 from workflows.ttbar_semilep_processor import TTbarSemilepProcessor
-from config.parameters.cuts import (
-    semilep_preselection,
-    trigger_selection_data,
-    met_filter_selection,
-    high_btag_region,
-    low_btag_control_region,
-)
-from config.parameters.weights import TopPtReweighting, LHEScaleVariation
 
-import os
+cloudpickle.register_pickle_by_value(workflow)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Dataset JSON paths (built by dataset_diagnostics.py)
-# ─────────────────────────────────────────────────────────────────────────────
+localdir = os.path.dirname(os.path.abspath(__file__))
+default_parameters = defaults.get_default_parameters()
+parameters = default_parameters
 
-FILELIST_DIR = os.path.join(os.path.dirname(__file__), "../datasets/filelists")
+FILELIST_DIR = os.path.join(localdir, "../datasets/filelists")
 
 cfg = Configurator(
-    # ── Workflow ──────────────────────────────────────────────────────────────
     workflow=TTbarSemilepProcessor,
-
-    # ── Datasets ─────────────────────────────────────────────────────────────
-    # pocket-coffea expects a dict mapping sample name → filelist JSON.
-    # These JSONs are produced by dataset_diagnostics.py.
+    parameters=parameters,
     datasets={
         "jsons": [
             os.path.join(FILELIST_DIR, "mc_samples_UL18.json"),
             os.path.join(FILELIST_DIR, "data_samples_UL18.json"),
         ],
-        "filter": {
-            "samples": None,   # None = use all; or list of names to restrict
-        },
+        #"filter": {
+        #    "samples": [],
+        #    "samples_exclude": [],
+        #    
+        #},
     },
-
-    # ── Parameters passed to processor and cuts ───────────────────────────────
-    parameters={},
-
-    # ── Weights ───────────────────────────────────────────────────────────────
-    weights_cfg={
+    skim=[
+        get_nPVgood(1),
+        eventFlags,
+        goldenJson,
+    ],
+    preselections=[passthrough],
+    categories={
+        "SR_2b": [
+            get_nObj_min(4, coll="JetGood"),
+            get_nBtagMin(2, coll="BJetGood"),
+        ],
+        "CR_1b": [
+            get_nObj_min(4, coll="JetGood"),
+            get_nBtagMin(1, coll="BJetGood"),
+        ],
+    },
+    weights={
         "common": {
-            "inclusive": [
-                "genWeight",
-                "lumi",
-                "XS",
-                "pileup",
-                "sf_mu_id",
-                "sf_mu_iso",
-                "sf_mu_trigger",
-                "sf_btag_shape",   # shape-based b-tag SF (DeepJet)
-            ],
-            "bysample": {},   # add sample-specific weights here if needed
+            "inclusive": ["genWeight", "lumi", "XS", "pileup"],
+            "bycategory": {},
         },
-        "custom_weights": [
-            TopPtReweighting,
-            LHEScaleVariation,
-        ],
+        "bycategory": {},
+        "bysample": {},
     },
-
-    # ── Systematic variations ─────────────────────────────────────────────────
-    # Shape systematics (produce separate Up/Down histograms)
-    systematic_cfg={
-        "shape": [
-            "JES",     # Jet Energy Scale (full set of JEC sources)
-            "JER",     # Jet Energy Resolution
-            "top_pt_reweighting",
-            "qcd_scale",
-            "sf_mu_id",
-            "sf_mu_iso",
-            "sf_mu_trigger",
-            "sf_btag_shape",
-            "pileup",
-        ],
-    },
-
-    # ── Selection / categories ────────────────────────────────────────────────
-    # pocket-coffea applies cuts in order; each defines a "category" in the
-    # output histograms.  You get cutflow counts automatically.
-    cut_cfg={
-        "preselections": [
-            # MET filters (data + MC)
-            Cut(
-                name="met_filters",
-                function=met_filter_selection,
-                samples="all",
-            ),
-            # Trigger (data only; MC is trigger-unbiased)
-            Cut(
-                name="trigger",
-                function=trigger_selection_data,
-                samples=["SingleMuon_UL18A", "SingleMuon_UL18B",
-                         "SingleMuon_UL18C", "SingleMuon_UL18D"],
-            ),
-            # Main semileptonic selection
-            Cut(
-                name="semilep_preselection",
-                function=semilep_preselection,
-                samples="all",
-            ),
-        ],
-        "categories": {
-            # Signal region
-            "SR": [
-                Cut(name="high_btag", function=high_btag_region, samples="all"),
-            ],
-            # Control region for QCD / W+jets
-            "CR_1btag": [
-                Cut(name="low_btag", function=low_btag_control_region, samples="all"),
-            ],
+    variations={
+        "weights": {
+            "common": {
+                "inclusive": ["pileup"],
+                "bycategory": {},
+            },
+            "bysample": {},
+            "bycategory": {},
         },
     },
-
-    # ── Output variables (saved as flat columns) ──────────────────────────────
-    # Saved to parquet; one row per event passing all cuts.
-    columns={
-        "common": {
-            "inclusive": [
-                ColOut("events", ["run", "luminosityBlock", "event"]),
-                ColOut("GoodMuons", ["pt", "eta", "phi", "mass"], flatten=True),
-                ColOut("GoodJets",  ["pt", "eta", "phi", "mass",
-                                     "btagDeepFlavB"], flatten=True),
-                ColOut("MET", ["pt", "phi"]),
-            ],
-        },
-    },
-
-    # ── Histograms ────────────────────────────────────────────────────────────
     variables={
-        # Muon kinematics
         "muon_pt": HistConf(
-            [Axis(coll="GoodMuons", field="pt", bins=50, start=0, stop=300,
-                  label=r"Muon $p_T$ [GeV]", pos=0)]
+            [Axis(coll="MuonGood", field="pt", bins=50, start=0, stop=300,
+                  label=r"Muon $p_T$ [GeV]")]
         ),
         "muon_eta": HistConf(
-            [Axis(coll="GoodMuons", field="eta", bins=50, start=-2.5, stop=2.5,
-                  label=r"Muon $\eta$", pos=0)]
+            [Axis(coll="MuonGood", field="eta", bins=50, start=-2.5, stop=2.5,
+                  label=r"Muon $\eta$")]
         ),
-        # Jet kinematics
         "jet_pt": HistConf(
-            [Axis(coll="GoodJets", field="pt", bins=50, start=0, stop=500,
+            [Axis(coll="JetGood", field="pt", bins=50, start=0, stop=500,
                   label=r"Jet $p_T$ [GeV]")]
         ),
         "jet_eta": HistConf(
-            [Axis(coll="GoodJets", field="eta", bins=50, start=-2.5, stop=2.5,
+            [Axis(coll="JetGood", field="eta", bins=50, start=-2.5, stop=2.5,
                   label=r"Jet $\eta$")]
         ),
-        "jet_multiplicity": HistConf(
-            [Axis(coll="events", field="nGoodJets", bins=12, start=0, stop=12,
-                  label="Number of jets")]
-        ),
-        "bjet_multiplicity": HistConf(
-            [Axis(coll="events", field="nBJets", bins=8, start=0, stop=8,
-                  label="Number of b-jets")]
-        ),
-        # MET
         "met_pt": HistConf(
             [Axis(coll="MET", field="pt", bins=50, start=0, stop=400,
                   label=r"$p_T^{miss}$ [GeV]")]
         ),
-        # Reconstructed top mass (filled in processor after reco)
-        "reco_top_mass": HistConf(
-            [Axis(coll="events", field="RecoTopMass", bins=60, start=0, stop=400,
-                  label=r"Reconstructed top mass [GeV]")]
-        ),
-        "reco_W_mass": HistConf(
-            [Axis(coll="events", field="RecoWMass", bins=60, start=0, stop=200,
-                  label=r"Reconstructed $W$ mass [GeV]")]
-        ),
-        # HT
-        "HT": HistConf(
-            [Axis(coll="events", field="HT", bins=60, start=0, stop=2000,
-                  label=r"$H_T$ [GeV]")]
-        ),
     },
-
-    # ── General settings ──────────────────────────────────────────────────────
-    workflow_options={
-        "chunksize": 100_000,    # events per dask task; tune for memory
-        "maxchunks": None,       # None = process everything; set int for tests
-    },
+    columns={},
+    workflow_options={},
 )
-
-
-if __name__ == "__main__":
-    # Quick validation — prints sample list and cut summary
-    print(cfg)

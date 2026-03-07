@@ -46,7 +46,7 @@ OBJECT_PARAMS = {
 # ─────────────────────────────────────────────────────────────────────────────
 # Object preselection helpers
 # These are called by the processor to build collections that persist
-# across the event loop as events.GoodMuons, events.GoodJets, etc.
+# across the event loop as events.MuonGood, events.JetGood, etc.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def select_good_muons(events):
@@ -100,7 +100,7 @@ def select_good_jets(events):
     # DR cleaning vs tight muons (already attached to events by the processor)
     if hasattr(events, "GoodMuons"):
         dr_ok = ak.all(
-            j.metric_table(events.GoodMuons) > 0.4, axis=2
+            j.metric_table(events.MuonGood) > 0.4, axis=2
         )
         base = base & dr_ok
 
@@ -128,11 +128,11 @@ def semilep_preselection(events, params, year, sample, **kwargs):
       - >= 2 b-tagged jets
       - MET > 20 GeV
     """
-    n_good_mu   = ak.num(events.GoodMuons)
+    n_good_mu   = ak.num(events.MuonGood)
     n_veto_mu   = ak.num(events.VetoMuons)
     n_veto_el   = ak.num(events.VetoElectrons)
-    n_good_jets = ak.num(events.GoodJets)
-    n_bjets     = ak.num(events.BJets)
+    n_good_jets = ak.num(events.JetGood)
+    n_bjets     = ak.num(events.BJetGood)
     met         = events.MET.pt
 
     return (
@@ -183,9 +183,9 @@ def met_filter_selection(events, params, year, sample, **kwargs):
 def high_btag_region(events, params, year, sample, **kwargs):
     """Signal region: >= 2 b-tags (already in preselection, but useful as
     an explicit named cut for the cutflow)."""
-    return ak.num(events.BJets) >= 2
+    return ak.num(events.BJetGood) >= 2
 
 
 def low_btag_control_region(events, params, year, sample, **kwargs):
     """Control region: exactly 1 b-tag (for QCD / W+jets studies)."""
-    return ak.num(events.BJets) == 1
+    return ak.num(events.BJetGood) == 1

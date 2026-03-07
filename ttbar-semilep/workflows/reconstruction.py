@@ -77,16 +77,16 @@ def reconstruct_tops(events):
     Full semileptonic ttbar reconstruction.
 
     Requires events to have:
-        events.GoodMuons   (exactly 1 entry per event)
-        events.GoodJets    (>= 4)
-        events.BJets       (>= 2; subset of GoodJets)
+        events.MuonGood   (exactly 1 entry per event)
+        events.JetGood    (>= 4)
+        events.BJetGood       (>= 2; subset of GoodJets)
         events.MET
 
     Returns a dict of scalar ak.Arrays (one value per event):
         reco_top_mass, reco_antitop_mass, reco_W_mass,
         reco_top_pt, chi2
     """
-    muon = ak.firsts(events.GoodMuons)
+    muon = ak.firsts(events.MuonGood)
     met  = events.MET
 
     # ── Neutrino pz ──────────────────────────────────────────────────────────
@@ -100,17 +100,17 @@ def reconstruct_tops(events):
 
     # ── Hadronic top reco ─────────────────────────────────────────────────────
     # Use b-jets as b-candidates.  Take the 2 highest-pT b-jets.
-    bjets = events.BJets[:, :2]   # shape (n_events, <=2)
+    bjets = events.BJetGood[:, :2]   # shape (n_events, <=2)
 
     # Light jets = good jets not in the top-2 b-jets
     # (pocket-coffea doesn't provide a "not-b" collection, so we
     #  reconstruct it from indices)
     b_idx   = ak.local_index(bjets,   axis=1)
-    all_idx = ak.local_index(events.GoodJets, axis=1)
+    all_idx = ak.local_index(events.JetGood, axis=1)
 
     # Simple proxy: use the first 2 non-bjet jets as light jets
     # A proper combinatoric search is done below when >=3 light jets exist.
-    light_jets = events.GoodJets[events.GoodJets.btagDeepFlavB
+    light_jets = events.JetGood[events.JetGood.btagDeepFlavB
                                   < 0.2783][:, :4]
 
     # For each event, try all pairs of light jets and pick the pair whose

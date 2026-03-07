@@ -17,7 +17,6 @@ import awkward as ak
 
 from pocket_coffea.workflows.base import BaseProcessorABC
 from pocket_coffea.lib.objects import (
-    jet_correction,         # applies JEC/JER and returns corrected jets
     lepton_selection,
     get_dilepton,
 )
@@ -53,47 +52,19 @@ class TTbarSemilepProcessor(BaseProcessorABC):
     # ── 1. Object preselection ────────────────────────────────────────────────
 
     def apply_object_preselection(self, variation):
-        """
-        Called once per systematic variation (jet variations rerun jet
-        selection; lepton variations rerun lepton SFs but not collection).
-
-        Attaches collections to self.events:
-            GoodMuons, VetoMuons, VetoElectrons,
-            GoodJets, BJets
-        """
         events = self.events
 
-        # Apply JEC/JER corrections (pocket-coffea handles variation branching)
-        if variation in ("nominal", "JES_up", "JES_down", "JER_up", "JER_down"):
-            events["Jet"] = jet_correction(
-                events, variation, self._year,
-                self.params.get("jet_corrections", {}),
-            )
-
-        # Muons
-        events["GoodMuons"]      = select_good_muons(events)
-        events["VetoMuons"]      = select_veto_muons(events)
-        events["VetoElectrons"]  = select_veto_electrons(events)
+        events["MuonGood"]     = select_good_muons(events)
+        events["MuonVeto"]     = select_veto_muons(events)
+        events["ElectronVeto"] = select_veto_electrons(events)
 
         # Jets (DR-cleaned vs GoodMuons, so muons must come first)
-        events["GoodJets"] = select_good_jets(events)
-        events["BJets"]    = select_btagged_jets(
-            events.GoodJets,
+        events["JetGood"]      = select_good_jets(events)
+        events["BJetGood"]         = select_btagged_jets(
+            events.JetGood,
             wp=OBJECT_PARAMS["jet"]["btag_wp"],
         )
 
-    # ── 2. Count objects ──────────────────────────────────────────────────────
-
-    def count_objects(self, variation):
-        """
-        Attach scalar-per-event counts as new fields on events.
-        These are used as histogram axes (see analysis_config.py variables).
-        """
-        events = self.events
-        events["nGoodMuons"]  = ak.num(events.GoodMuons)
-        events["nGoodJets"]   = ak.num(events.GoodJets)
-        events["nBJets"]      = ak.num(events.BJets)
-        events["nLightJets"]  = events["nGoodJets"] - events["nBJets"]
 
     # ── 3. Extra variables (reco, HT, …) ─────────────────────────────────────
 
@@ -108,14 +79,23 @@ class TTbarSemilepProcessor(BaseProcessorABC):
         events = self.events
 
         # HT = scalar sum of jet pTs
-        events["HT"] = ak.sum(events.GoodJets.pt, axis=1)
+        events["HT"] = ak.sum(events.JetGood.pt, axis=1)
 
         # Top quark reconstruction
         reco = reconstruct_tops(events)
         for key, val in reco.items():
             events[key] = val
 
-    # ── Optional: extra diagnostics saved per-chunk ───────────────────────────
+    ###############################################################
+
+    def count_objects(self, variation):
+        events = self.events
+        events["nMuonGood"] = ak.num(events.MuonGood)
+        events["nJetGood"]  = ak.num(events.JetGood)
+        events["nBJetGood"] = ak.num(events.BJetGood)
+        events["nLightJet"] = events["nJetGood"] - events["nBJetGood"]
+
+        # ── Optional: extra diagnostics saved per-chunk ───────────────────────────
 
     def process_extra(self, events):
         """
