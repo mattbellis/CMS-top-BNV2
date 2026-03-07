@@ -1,0 +1,35 @@
+# Collision data samples for the ttbar semileptonic analysis
+# SingleMuon primary datasets, UL18 as example
+# Add UL16/UL17 blocks with the same structure for Run II combination
+#
+# integrated_luminosity in pb^-1
+
+SingleMuon_UL18A:
+  das_path: "/SingleMuon/Run2018A-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD"
+  integrated_luminosity: 14027.617
+  golden_json: "corrections/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
+  era: UL18
+  run_range: [314472, 316995]
+
+SingleMuon_UL18B:
+  das_path: "/SingleMuon/Run2018B-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD"
+  integrated_luminosity: 7057.402
+  golden_json: "corrections/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
+  era: UL18
+  run_range: [317080, 319310]
+
+SingleMuon_UL18C:
+  das_path: "/SingleMuon/Run2018C-UL2018_MiniAODv2_NanoAODv9-v2/NANOAOD"
+  integrated_luminosity: 6894.770
+  golden_json: "corrections/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
+  era: UL18
+  run_range: [319337, 320065]
+
+SingleMuon_UL18D:
+  das_path: "/SingleMuon/Run2018D-UL2018_MiniAODv2_NanoAODv9-v3/NANOAOD"
+  integrated_luminosity: 31742.979
+  golden_json: "corrections/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt"
+  era: UL18
+  run_range: [320500, 325175]
+
+# Convenience: total UL18 luminosity = 59722.768 pb^-1 ≈ 59.7 fb^-1

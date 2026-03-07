@@ -1,0 +1,28 @@
+name: ttbar-semilep
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - jupyterlab
+  - ipywidgets
+  - tqdm
+  - pyyaml
+  - pip
+  - pip:
+    - pocket-coffea>=0.8.0
+    - coffea>=2024.1.0
+    - awkward>=2.6
+    - uproot>=5.3
+    - hist>=2.7
+    - correctionlib>=2.4
+    - dask[distributed]>=2024.1
+    - mplhep>=0.3.50
+    - pyarrow          # parquet I/O
+    - fastparquet
+    - rich             # pretty terminal output
+    - click            # CLI for scripts

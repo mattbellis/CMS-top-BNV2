@@ -1,0 +1,67 @@
+# Human-readable metadata for samples: labels, colors, stack ordering.
+# Used by make_plots.py and the notebook.
+
+# ── Process group definitions ─────────────────────────────────────────────────
+# These aggregate individual samples for stacked plots.
+
+process_groups:
+  ttbar:
+    label: "$t\\bar{t}$"
+    color: "#e41a1c"
+    stack_order: 1
+    samples: [TTToSemiLeptonic, TTTo2L2Nu, TTToHadronic]
+
+  single_top:
+    label: "Single top"
+    color: "#ff7f00"
+    stack_order: 2
+    samples:
+      - ST_tW_top_5f
+      - ST_tW_antitop_5f
+      - ST_t-channel_top_4f
+      - ST_t-channel_antitop_4f
+      - ST_s-channel_4f_leptonDecays
+
+  diboson:
+    label: "Diboson"
+    color: "#984ea3"
+    stack_order: 3
+    samples: [WW, WZ, ZZ]
+
+  DY:
+    label: "Drell-Yan"
+    color: "#4daf4a"
+    stack_order: 4
+    samples: [DYJetsToLL_M-50_HT-0to100, DYJetsToLL_M-50_HT-100to200]
+
+  QCD:
+    label: "QCD multijet"
+    color: "#999999"
+    stack_order: 5
+    samples:
+      - QCD_HT200to300
+      - QCD_HT300to500
+      - QCD_HT500to700
+      - QCD_HT700to1000
+      - QCD_HT1000to1500
+
+  data:
+    label: "Data"
+    color: "black"
+    stack_order: 0
+    samples:
+      - SingleMuon_UL18A
+      - SingleMuon_UL18B
+      - SingleMuon_UL18C
+      - SingleMuon_UL18D
+
+# ── Signal sample for overlays ────────────────────────────────────────────────
+signal_sample: TTToSemiLeptonic
+
+# ── Era luminosities (pb^-1) ──────────────────────────────────────────────────
+luminosities:
+  UL16APV: 19500.0
+  UL16:    16800.0
+  UL17:    41480.0
+  UL18:    59722.768
+  RunII:   137502.768   # sum of above
